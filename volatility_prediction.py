@@ -1,9 +1,5 @@
 # -*- coding: utf-8 -*-
-"""
-Created on Wed Feb  7 13:43:41 2024
 
-@author: dbda
-"""
 
 import pandas as pd
 import matplotlib.pyplot as plt
