@@ -1,11 +1,15 @@
 # -*- coding: utf-8 -*-
+"""
+Created on Wed Feb  7 13:43:41 2024
 
+@author: dbda
+"""
 
 import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
 
-path='D:\BigData_staging\BIGDATAPROYECT'    
+path='C:/Users/Admin/Desktop/Tushar Project/BIG DATA PROYECT'    
 
 #Generate the list of ID
 import glob
@@ -162,6 +166,21 @@ trade_book_df_train,trade_book_df_test= train_test_split(trade_book_df,test_size
 
 trade_book_df_train.drop('Unnamed: 0',axis=1, inplace=True)
 trade_book_df_test.drop('Unnamed: 0',axis=1, inplace=True)
+
+
+#%% Tushar kales modification
+columns_to_drop = ['Unnamed: 0']
+if 'Unnamed: 0' in trade_book_df_train.columns:
+    trade_book_df_train.drop(columns_to_drop, axis=1, inplace=True)
+else:
+    print("'Unnamed: 0' column not found in DataFrame")
+
+columns_to_drop = ['bid_price1_x', 'ask_size1_x', 'bid_price2_x', 'ask_size2_x', 'bid_price1_y', 'ask_size1_y', 'bid_price2_y', 'ask_size2_y']
+missing_columns = [col for col in columns_to_drop if col not in trade_book_df.columns]
+if missing_columns:
+    print(f"Columns {missing_columns} not found in DataFrame")
+else:
+    trade_book_df.drop(columns_to_drop, axis=1, inplace=True)
 
 
 #%%
@@ -586,3 +605,65 @@ print('rmspe:', rmspe(pd.DataFrame(y_test),y_pred))
 # ss = pd.read_csv(path+"\sample_submission.csv")
 # ss['target']=y_pred
 # ss.to_csv('optiver_knn.csv',index=False)
+
+
+
+#%%
+import tensorflow as tf
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense, Dropout
+from sklearn.metrics import r2_score, mean_squared_error
+import numpy as np
+
+def rmspe(y_true, y_pred):
+    loss = np.sqrt(np.mean(np.square((y_true-y_pred)/y_true)))
+    return loss
+
+# Define RMSPE function
+def rmspe(y_true, y_pred):
+    return np.sqrt(np.mean(np.square((y_true - y_pred) / y_true))) * 100
+
+# Define batch processing function
+def batch_predict(model, X_test_scaled, qt_y, batch_size=1000):
+    num_samples = X_test_scaled.shape[0]
+    y_pred = np.zeros((num_samples, 1))
+
+    for i in range(0, num_samples, batch_size):
+        batch_x = X_test_scaled[i:i+batch_size]
+        batch_y_pred = model.predict(batch_x)
+        y_pred[i:i+batch_size] = qt_y.inverse_transform(batch_y_pred)
+
+    return y_pred
+
+# Define the MLP model
+def create_mlp(input_dim):
+    model = Sequential([
+        Dense(64, activation='relu', input_dim=input_dim),
+        Dropout(0.2),
+        Dense(32, activation='relu'),
+        Dropout(0.2),
+        Dense(1)  # Output layer with one neuron for regression
+    ])
+    # Compile the model
+    model.compile(optimizer='adam', loss='mean_squared_error')
+    return model
+
+# Create and compile the MLP model
+mlp_model = create_mlp(X_train_scaled.shape[1])
+
+# Train the model
+mlp_model.fit(X_train_scaled, y_train_scaled, epochs=50, batch_size=32, validation_split=0.2, verbose=1)
+
+# Evaluate the model using batch processing
+y_pred = batch_predict(mlp_model, X_test_scaled, qt_y)
+
+# Calculate evaluation metrics
+r2 = r2_score(y_test, y_pred)
+mse = mean_squared_error(y_test, y_pred)
+rmspe_val = rmspe(y_test, y_pred)
+
+print('r2_score:', r2)
+print('mean_squared_error:', mse)
+print('rmspe:', rmspe_val)
+
+
